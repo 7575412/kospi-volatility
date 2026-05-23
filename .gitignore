@@ -2,11 +2,28 @@
 backend/venv/
 backend/__pycache__/
 backend/**/__pycache__/
+backend/*.pyc
+backend/**/*.pyc
 backend/cache/
+backend/.env
+backend/.env.*
+backend/*.log
 
 # Node
 frontend/node_modules/
 frontend/.expo/
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # OS
 .DS_Store
+Thumbs.db
