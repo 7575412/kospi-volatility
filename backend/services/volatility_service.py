@@ -110,7 +110,7 @@ def compute_top10_volatility(launch_time: Optional[str] = None) -> dict:
     records.sort(key=lambda x: x["volatility"], reverse=True)
 
     stocks_out = []
-    for rank, rec in enumerate(records[:10], start=1):
+    for rank, rec in enumerate(records[:20], start=1):
         name = stock.get_market_ticker_name(rec["ticker"])
         stocks_out.append({"rank": rank, "name": name, **rec})
 

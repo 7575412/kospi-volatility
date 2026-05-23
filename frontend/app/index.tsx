@@ -36,7 +36,7 @@ export default function HomeScreen() {
 
   const Header = (
     <View style={styles.header}>
-      <Text style={styles.title}>KOSPI 변동성 TOP 10</Text>
+      <Text style={styles.title}>KOSPI 변동성 TOP 20</Text>
       <Text style={styles.subtitle}>최근 3개월 일별 수익률 표준편차 기준</Text>
       {formattedDate ? (
         <Text style={styles.dateText}>
@@ -64,7 +64,7 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000000" />
         {Header}
-        {[...Array(10)].map((_, i) => <SkeletonCard key={i} />)}
+        {[...Array(20)].map((_, i) => <SkeletonCard key={i} />)}
       </SafeAreaView>
     );
   }
