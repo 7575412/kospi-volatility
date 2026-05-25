@@ -4,3 +4,7 @@ pykrx==1.0.45
 pandas==2.2.2
 numpy==1.26.4
 cachetools==5.3.3
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==5.2.2
+yfinance==0.2.54

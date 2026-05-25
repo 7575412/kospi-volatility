@@ -2,13 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
-from routers import volatility, news
+from routers import volatility, news, analysis, us_stocks
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 서버 시작 시 백그라운드로 캐시 워밍업
     from services.volatility_service import compute_top10_volatility
-    asyncio.get_event_loop().run_in_executor(None, compute_top10_volatility, None)
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, compute_top10_volatility, None)
     yield
 
 app = FastAPI(title="KOSPI Volatility API", lifespan=lifespan)
@@ -21,7 +22,9 @@ app.add_middleware(
 )
 
 app.include_router(volatility.router, prefix="/api")
-app.include_router(news.router, prefix="/api")
+app.include_router(news.router,       prefix="/api")
+app.include_router(analysis.router,   prefix="/api")
+app.include_router(us_stocks.router,  prefix="/api")
 
 
 @app.get("/health")

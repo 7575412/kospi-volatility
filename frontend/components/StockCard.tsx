@@ -13,7 +13,7 @@ export function StockCard({ item, launchTime }: Props) {
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.7}
-      onPress={() => router.push({ pathname: "/news/[ticker]", params: { ticker: item.ticker, name: item.name, launchTime } })}
+      onPress={() => router.push({ pathname: "/analysis/[ticker]", params: { ticker: item.ticker, name: item.name, launchTime } })}
     >
       <View style={styles.rankBadge}>
         <Text style={styles.rankText}>#{item.rank}</Text>
