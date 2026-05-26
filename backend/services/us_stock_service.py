@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import pandas as pd
 from services.analysis_service import (
     compute_indicators, _load_disk, _save_disk, _date_str, get_cache
 )
@@ -31,6 +32,12 @@ def _fetch_us_ohlcv(symbol: str, days: int = 360):
     )
     if df.empty:
         raise ValueError(f"No data returned for {symbol}")
+    # yfinance 0.2+ may return MultiIndex columns for single-ticker download
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    # Strip timezone from DatetimeIndex to avoid comparison issues
+    if hasattr(df.index, "tz") and df.index.tz is not None:
+        df.index = df.index.tz_convert(None)
     df = df.rename(columns={
         "Open":   "시가",
         "High":   "고가",
@@ -38,9 +45,6 @@ def _fetch_us_ohlcv(symbol: str, days: int = 360):
         "Close":  "종가",
         "Volume": "거래량",
     })
-    # yfinance may return MultiIndex columns when downloading single ticker
-    if isinstance(df.columns, type(df.columns)) and hasattr(df.columns, "levels"):
-        df.columns = df.columns.get_level_values(0)
     return df[["시가", "고가", "저가", "종가", "거래량"]]
 
 

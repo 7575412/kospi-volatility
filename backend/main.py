@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
-from routers import volatility, news, analysis, us_stocks
+from routers import volatility, news, analysis, us_stocks, smart_ranking, peers
 
 
 @asynccontextmanager
@@ -21,10 +21,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(volatility.router, prefix="/api")
-app.include_router(news.router,       prefix="/api")
-app.include_router(analysis.router,   prefix="/api")
-app.include_router(us_stocks.router,  prefix="/api")
+app.include_router(volatility.router,     prefix="/api")
+app.include_router(news.router,           prefix="/api")
+app.include_router(analysis.router,       prefix="/api")
+app.include_router(us_stocks.router,      prefix="/api")
+app.include_router(smart_ranking.router,  prefix="/api")
+app.include_router(peers.router,          prefix="/api")
 
 
 @app.get("/health")

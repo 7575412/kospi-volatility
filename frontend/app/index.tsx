@@ -8,10 +8,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useVolatility, StockItem } from "../hooks/useVolatility";
 import { useUsStocks, UsStockSummary } from "../hooks/useUsStocks";
+import { useSmartRanking, SmartStock, BestPick } from "../hooks/useSmartRanking";
 import { StockCard } from "../components/StockCard";
 import { SkeletonCard } from "../components/SkeletonCard";
 
-type Tab = "KR" | "US";
+type Tab = "KR" | "US" | "PICK";
 
 function toLaunchDate(d: Date): string {
   const y = d.getFullYear();
@@ -27,6 +28,60 @@ const REC_COLOR: Record<string, string> = {
   매도:   "#FF9F0A",
   강매도: "#FF453A",
 };
+
+function BestPickCard({ pick, label }: { pick: BestPick; label: string }) {
+  const router = useRouter();
+  const recColor = REC_COLOR[pick.recommendation] ?? "#636366";
+  const isBuy = label === "매수";
+  return (
+    <TouchableOpacity
+      style={[styles.pickCard, isBuy ? styles.pickCardBuy : styles.pickCardSell]}
+      activeOpacity={0.75}
+      onPress={() => router.push({ pathname: "/analysis/[ticker]", params: { ticker: pick.ticker, name: pick.name } })}
+    >
+      <Text style={styles.pickCardLabel}>{isBuy ? "★ 최적 매수" : "★ 최적 매도"}</Text>
+      <Text style={styles.pickName} numberOfLines={1}>{pick.name}</Text>
+      <Text style={styles.pickTicker}>{pick.ticker}</Text>
+      <Text style={[styles.pickRec, { color: recColor }]}>{pick.recommendation}</Text>
+      <Text style={styles.pickReason} numberOfLines={2}>{pick.reason}</Text>
+      <View style={styles.pickMeta}>
+        <Text style={styles.pickMetaText}>점수 {pick.composite_score.toFixed(0)}</Text>
+        <Text style={styles.pickMetaText}>RSI {pick.rsi?.toFixed(0) ?? "—"}</Text>
+        <Text style={styles.pickMetaText}>PER {pick.per.toFixed(1)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function SmartRow({ item }: { item: SmartStock }) {
+  const router = useRouter();
+  const recColor = REC_COLOR[item.recommendation] ?? "#636366";
+  const positive = item.return_1d >= 0;
+  const barWidth = Math.max(4, Math.min(100, item.composite_score));
+  return (
+    <TouchableOpacity
+      style={styles.smartRow}
+      activeOpacity={0.7}
+      onPress={() => router.push({ pathname: "/analysis/[ticker]", params: { ticker: item.ticker, name: item.name } })}
+    >
+      <Text style={styles.smartRank}>{item.rank}</Text>
+      <View style={styles.smartInfo}>
+        <Text style={styles.smartName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.smartTicker}>{item.ticker}</Text>
+        <View style={styles.scoreBarBg}>
+          <View style={[styles.scoreBarFill, { width: `${barWidth}%` as any }]} />
+        </View>
+      </View>
+      <View style={styles.smartMetrics}>
+        <Text style={[styles.smartRec, { color: recColor }]}>{item.recommendation}</Text>
+        <Text style={[styles.smartReturn, positive ? styles.up : styles.down]}>
+          {positive ? "+" : ""}{item.return_1d.toFixed(2)}%
+        </Text>
+        <Text style={styles.smartPer}>PER {item.per.toFixed(1)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 function UsCard({ item }: { item: UsStockSummary }) {
   const router = useRouter();
@@ -65,11 +120,13 @@ export default function HomeScreen() {
   const [tab, setTab] = useState<Tab>("KR");
   const launchTime = useRef(toLaunchDate(new Date())).current;
 
-  const kr = useVolatility(launchTime);
-  const us = useUsStocks();
+  const kr    = useVolatility(launchTime);
+  const us    = useUsStocks();
+  const smart = useSmartRanking(launchTime);
 
   useEffect(() => { kr.refresh(); }, []);
-  useEffect(() => { if (tab === "US" && us.stocks.length === 0) us.load(); }, [tab]);
+  useEffect(() => { if (tab === "US"   && us.stocks.length === 0) us.load();     }, [tab]);
+  useEffect(() => { if (tab === "PICK" && !smart.data)            smart.load();  }, [tab]);
 
   const formattedDate = kr.asOfDate
     ? `${kr.asOfDate.slice(0, 4)}.${kr.asOfDate.slice(4, 6)}.${kr.asOfDate.slice(6, 8)}`
@@ -97,6 +154,41 @@ export default function HomeScreen() {
           <ActivityIndicator color="#FF9F0A" size="small" style={{ marginRight: 8 }} />
           <Text style={styles.loadingText}>전체 KOSPI 데이터 수집 중... (약 1~2분 소요)</Text>
         </View>
+      ) : null}
+    </View>
+  );
+
+  // ── Smart Ranking header ──────────────────────────────────────────────
+  const PickHeader = (
+    <View style={styles.header}>
+      <Text style={styles.title}>스마트 추천</Text>
+      <Text style={styles.subtitle}>거래대금 · 기술지표 · PER · 거래량 종합 TOP 15</Text>
+      {smart.data?.as_of_date ? (
+        <Text style={styles.dateText}>
+          기준일: {smart.data.as_of_date.slice(0, 4)}.{smart.data.as_of_date.slice(4, 6)}.{smart.data.as_of_date.slice(6)}
+          {smart.data.cached ? " · 캐시됨" : ""}
+        </Text>
+      ) : null}
+      {smart.error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{smart.error}</Text>
+          <Text style={styles.errorHint}>아래로 당겨 재시도</Text>
+        </View>
+      ) : null}
+      {smart.loading && !smart.data ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color="#FF9F0A" size="small" style={{ marginRight: 8 }} />
+          <Text style={styles.loadingText}>전체 KOSPI 분석 중... (1~3분 소요)</Text>
+        </View>
+      ) : null}
+      {smart.data?.best_buy || smart.data?.best_sell ? (
+        <View style={styles.pickRow}>
+          {smart.data.best_buy  && <BestPickCard pick={smart.data.best_buy}  label="매수" />}
+          {smart.data.best_sell && <BestPickCard pick={smart.data.best_sell} label="매도" />}
+        </View>
+      ) : null}
+      {smart.data?.stocks?.length ? (
+        <Text style={styles.sectionTitle}>순위별 종목</Text>
       ) : null}
     </View>
   );
@@ -139,6 +231,12 @@ export default function HomeScreen() {
         >
           <Text style={[styles.tabText, tab === "US" && styles.tabTextActive]}>🇺🇸 미국</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabItem, tab === "PICK" && styles.tabActive]}
+          onPress={() => setTab("PICK")}
+        >
+          <Text style={[styles.tabText, tab === "PICK" && styles.tabTextActive]}>★ 추천</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Korean tab */}
@@ -166,6 +264,26 @@ export default function HomeScreen() {
             }
           />
         )
+      )}
+
+      {/* Smart Ranking tab */}
+      {tab === "PICK" && (
+        <FlatList
+          data={smart.data?.stocks ?? []}
+          keyExtractor={(item) => item.ticker}
+          renderItem={({ item }) => <SmartRow item={item} />}
+          ListHeaderComponent={PickHeader}
+          ListFooterComponent={<View style={{ height: 32 }} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={smart.loading}
+              onRefresh={smart.load}
+              tintColor="#FF9F0A"
+              title="업데이트 중..."
+              titleColor="#8E8E93"
+            />
+          }
+        />
       )}
 
       {/* US tab */}
@@ -215,6 +333,36 @@ const styles = StyleSheet.create({
   loadingBox:  { flexDirection: "row", alignItems: "center", marginTop: 12,
                  backgroundColor: "#1C1C1E", borderRadius: 10, padding: 12 },
   loadingText: { color: "#8E8E93", fontSize: 13, flex: 1 },
+
+  sectionTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "700", marginTop: 20, marginBottom: 4 },
+
+  pickRow:      { flexDirection: "row", gap: 10, marginTop: 12 },
+  pickCard:     { flex: 1, borderRadius: 14, padding: 14 },
+  pickCardBuy:  { backgroundColor: "#0A2A1A" },
+  pickCardSell: { backgroundColor: "#2A0A0A" },
+  pickCardLabel:{ color: "#8E8E93", fontSize: 11, marginBottom: 4 },
+  pickName:     { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  pickTicker:   { color: "#636366", fontSize: 12, marginTop: 1 },
+  pickRec:      { fontSize: 13, fontWeight: "700", marginTop: 6 },
+  pickReason:   { color: "#8E8E93", fontSize: 11, marginTop: 4 },
+  pickMeta:     { flexDirection: "row", gap: 8, marginTop: 8 },
+  pickMetaText: { color: "#636366", fontSize: 11 },
+
+  smartRow:     {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "#1C1C1E", borderRadius: 12,
+    marginHorizontal: 16, marginVertical: 4, padding: 12,
+  },
+  smartRank:    { color: "#FF9F0A", fontSize: 18, fontWeight: "800", width: 28 },
+  smartInfo:    { flex: 1, marginHorizontal: 10 },
+  smartName:    { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  smartTicker:  { color: "#636366", fontSize: 12, marginTop: 1 },
+  scoreBarBg:   { height: 3, backgroundColor: "#2C2C2E", borderRadius: 2, marginTop: 6 },
+  scoreBarFill: { height: 3, backgroundColor: "#FF9F0A", borderRadius: 2 },
+  smartMetrics: { alignItems: "flex-end" },
+  smartRec:     { fontSize: 13, fontWeight: "700" },
+  smartReturn:  { fontSize: 12, fontWeight: "600", marginTop: 2 },
+  smartPer:     { color: "#8E8E93", fontSize: 11, marginTop: 2 },
 
   usCard:      {
     flexDirection: "row", alignItems: "center",

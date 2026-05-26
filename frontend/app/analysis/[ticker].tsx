@@ -1,11 +1,14 @@
 import React, { useEffect } from "react";
 import {
-  FlatList, View, Text, TouchableOpacity,
+  FlatList, View, Text, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useAnalysis, Signal } from "../../hooks/useAnalysis";
+import {
+  useAnalysis, usePeers, useSimilarSignals,
+  Signal, UsPeer, SimilarEpisode,
+} from "../../hooks/useAnalysis";
 
 const REC_COLOR: Record<string, string> = {
   강매수: "#1DB954",
@@ -41,6 +44,57 @@ function SignalRow({ item }: { item: Signal }) {
   );
 }
 
+function fmtRet(v: number | null) {
+  if (v == null) return "—";
+  return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+}
+
+function UsPeerCard({ peer }: { peer: UsPeer }) {
+  const router = useRouter();
+  const recColor = REC_COLOR[peer.recommendation] ?? "#636366";
+  const positive = (peer.return_3m ?? 0) >= 0;
+  return (
+    <TouchableOpacity
+      style={styles.peerCard}
+      activeOpacity={0.7}
+      onPress={() => router.push({ pathname: "/analysis/[ticker]", params: { ticker: peer.symbol, name: peer.name } })}
+    >
+      <Text style={styles.peerSymbol}>{peer.symbol}</Text>
+      <Text style={styles.peerName} numberOfLines={1}>{peer.name}</Text>
+      <Text style={[styles.peerRec, { color: recColor }]}>{peer.recommendation}</Text>
+      <Text style={[styles.peerReturn, positive ? styles.up : styles.down]}>
+        {fmtRet(peer.return_3m)}
+      </Text>
+      <Text style={styles.peerPrice}>${peer.current_price.toFixed(2)}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function SimilarRow({ item }: { item: SimilarEpisode }) {
+  const up = (item.return_60d ?? 0) > 0;
+  return (
+    <View style={styles.similarRow}>
+      <View style={styles.similarLeft}>
+        <Text style={styles.similarName}>{item.name}</Text>
+        <Text style={styles.similarDate}>
+          {item.signal_date.slice(0, 4)}.{item.signal_date.slice(4, 6)}.{item.signal_date.slice(6)}
+          {"  "}
+          <Text style={{ color: REC_COLOR[item.signal_type] ?? "#636366" }}>{item.signal_type}</Text>
+        </Text>
+        <Text style={styles.similarTriggers} numberOfLines={1}>{item.triggers.join(" · ")}</Text>
+      </View>
+      <View style={styles.similarRight}>
+        <Text style={[styles.similarOutcome, up ? styles.up : styles.down]}>
+          {up ? "↑" : "↓"} {item.outcome}
+        </Text>
+        <Text style={styles.similarRet}>30일 {fmtRet(item.return_30d)}</Text>
+        <Text style={styles.similarRet}>60일 {fmtRet(item.return_60d)}</Text>
+        <Text style={styles.similarSim}>유사도 {(item.similarity * 100).toFixed(0)}%</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function AnalysisScreen() {
   const { ticker, name, launchTime } = useLocalSearchParams<{
     ticker: string;
@@ -50,8 +104,16 @@ export default function AnalysisScreen() {
   const router = useRouter();
   const isUS = !!(ticker && ticker.length <= 5 && /^[A-Z]+$/.test(ticker));
   const { data, loading, error, load } = useAnalysis(ticker, launchTime, isUS);
+  const peers   = usePeers(ticker, launchTime as string | undefined);
+  const similar = useSimilarSignals(ticker, launchTime as string | undefined);
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (data && !isUS) {
+      peers.load();
+      similar.load();
+    }
+  }, [!!data, isUS]);
 
   const cur = data?.current;
   const pt  = data?.price_targets;
@@ -194,14 +256,54 @@ export default function AnalysisScreen() {
           ) : null
         }
         ListFooterComponent={
-          !isUS ? (
-            <TouchableOpacity
-              style={styles.newsBtn}
-              onPress={() => router.push({ pathname: "/news/[ticker]", params: { ticker, name, launchTime: launchTime ?? "" } })}
-            >
-              <Text style={styles.newsBtnText}>뉴스 보기</Text>
-            </TouchableOpacity>
-          ) : <View style={{ height: 32 }} />
+          <View>
+            {/* US Peers section — Korean stocks only */}
+            {!isUS && (
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionTitle}>동일 업종 미국 대응주</Text>
+                {peers.data?.kr_sector ? (
+                  <Text style={styles.sectorLabel}>업종: {peers.data.kr_sector}</Text>
+                ) : null}
+                {peers.loading ? (
+                  <ActivityIndicator color="#FF9F0A" size="small" style={{ marginTop: 12 }} />
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                    {(peers.data?.peers ?? []).map((p) => (
+                      <UsPeerCard key={p.symbol} peer={p} />
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            )}
+
+            {/* Similar historical signals — Korean stocks only */}
+            {!isUS && (
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionTitle}>과거 유사 패턴 종목</Text>
+                <Text style={styles.sectorLabel}>동일 방향 신호 발생 후 수익률</Text>
+                {similar.loading ? (
+                  <ActivityIndicator color="#FF9F0A" size="small" style={{ marginTop: 12 }} />
+                ) : similar.data?.episodes?.length ? (
+                  similar.data.episodes.map((ep, i) => (
+                    <SimilarRow key={`${ep.ticker}-${ep.signal_date}-${i}`} item={ep} />
+                  ))
+                ) : !similar.loading ? (
+                  <Text style={styles.emptyText}>유사 패턴 데이터 없음</Text>
+                ) : null}
+              </View>
+            )}
+
+            {/* News button — Korean stocks only */}
+            {!isUS && (
+              <TouchableOpacity
+                style={styles.newsBtn}
+                onPress={() => router.push({ pathname: "/news/[ticker]", params: { ticker, name, launchTime: launchTime ?? "" } })}
+              >
+                <Text style={styles.newsBtnText}>뉴스 보기</Text>
+              </TouchableOpacity>
+            )}
+            <View style={{ height: 32 }} />
+          </View>
         }
       />
     </SafeAreaView>
@@ -268,4 +370,30 @@ const styles = StyleSheet.create({
     borderRadius: 12, padding: 16, alignItems: "center",
   },
   newsBtnText:  { color: "#FF9F0A", fontSize: 16, fontWeight: "700" },
+
+  sectionBlock:    { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8 },
+  sectorLabel:     { color: "#8E8E93", fontSize: 12, marginBottom: 4 },
+
+  peerCard:        { width: 140, backgroundColor: "#1C1C1E", borderRadius: 12, padding: 12, marginRight: 10 },
+  peerSymbol:      { color: "#FF9F0A", fontSize: 14, fontWeight: "800" },
+  peerName:        { color: "#FFFFFF", fontSize: 12, marginTop: 2 },
+  peerRec:         { fontSize: 13, fontWeight: "700", marginTop: 6 },
+  peerReturn:      { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  peerPrice:       { color: "#8E8E93", fontSize: 12, marginTop: 2 },
+
+  similarRow:      {
+    flexDirection: "row", backgroundColor: "#1C1C1E", borderRadius: 10,
+    marginHorizontal: 16, marginVertical: 4, padding: 12,
+  },
+  similarLeft:     { flex: 1, marginRight: 8 },
+  similarRight:    { alignItems: "flex-end" },
+  similarName:     { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
+  similarDate:     { color: "#636366", fontSize: 12, marginTop: 2 },
+  similarTriggers: { color: "#8E8E93", fontSize: 11, marginTop: 2 },
+  similarOutcome:  { fontSize: 14, fontWeight: "700" },
+  similarRet:      { color: "#8E8E93", fontSize: 12, marginTop: 2 },
+  similarSim:      { color: "#636366", fontSize: 11, marginTop: 2 },
+
+  up:   { color: "#30D158" },
+  down: { color: "#FF453A" },
 });

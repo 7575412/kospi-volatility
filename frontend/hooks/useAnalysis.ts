@@ -80,3 +80,85 @@ export function useAnalysis(ticker: string, launchTime?: string, isUS = false) {
 
   return { ...state, load };
 }
+
+// ── US Peers ──────────────────────────────────────────────────────────────
+
+export type UsPeer = {
+  symbol: string;
+  name: string;
+  current_price: number;
+  recommendation: string;
+  rsi: number | null;
+  return_3m: number | null;
+  buy_target: number;
+  sell_target: number;
+};
+
+export type PeersData = {
+  kr_sector: string;
+  peers: UsPeer[];
+  cached: boolean;
+};
+
+type PeersState = { data: PeersData | null; loading: boolean; error: string | null };
+
+export function usePeers(ticker: string, launchTime?: string) {
+  const [state, setState] = useState<PeersState>({ data: null, loading: false, error: null });
+
+  const load = useCallback(async () => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60_000);
+      const lt = launchTime ? `?launch_time=${launchTime}` : "";
+      const res = await fetch(`${API_BASE}/analysis/${ticker}/us-peers${lt}`, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setState({ data: await res.json(), loading: false, error: null });
+    } catch (e: any) {
+      setState((s) => ({ ...s, loading: false, error: e.message ?? "오류" }));
+    }
+  }, [ticker, launchTime]);
+
+  return { ...state, load };
+}
+
+// ── Similar Signals ───────────────────────────────────────────────────────
+
+export type SimilarEpisode = {
+  ticker: string;
+  name: string;
+  signal_date: string;
+  signal_price: number;
+  signal_type: string;
+  triggers: string[];
+  similarity: number;
+  return_30d: number | null;
+  return_60d: number | null;
+  outcome: string;
+};
+
+export type SimilarData = { episodes: SimilarEpisode[]; cached: boolean };
+
+type SimilarState = { data: SimilarData | null; loading: boolean; error: string | null };
+
+export function useSimilarSignals(ticker: string, launchTime?: string) {
+  const [state, setState] = useState<SimilarState>({ data: null, loading: false, error: null });
+
+  const load = useCallback(async () => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60_000);
+      const lt = launchTime ? `?launch_time=${launchTime}` : "";
+      const res = await fetch(`${API_BASE}/analysis/${ticker}/similar-signals${lt}`, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setState({ data: await res.json(), loading: false, error: null });
+    } catch (e: any) {
+      setState((s) => ({ ...s, loading: false, error: e.message ?? "오류" }));
+    }
+  }, [ticker, launchTime]);
+
+  return { ...state, load };
+}
