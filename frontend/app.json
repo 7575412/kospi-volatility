@@ -43,6 +43,13 @@
     "plugins": [
       "expo-router",
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ce32e82e-ed8c-43a4-b10f-fc5c43e1d1f9"
+      }
+    },
+    "owner": "hinttt1"
   }
 }
