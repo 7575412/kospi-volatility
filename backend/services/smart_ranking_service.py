@@ -27,12 +27,13 @@ def _per_score(per: float) -> float:
 
 
 def _composite_score(rank_in_candidates: int, total: int,
-                     tech_score: int, per: float, vol_ratio: float) -> float:
+                     tech_score: int, per: float, vol_ratio: float) -> tuple[float, dict]:
     trv   = (1 - rank_in_candidates / max(total, 1)) * 100
     tech  = ((tech_score or 0) + 5) / 10 * 100
     per_s = _per_score(per)
     vol_s = min(vol_ratio / 3.0, 1.0) * 100
-    return round(0.20 * trv + 0.40 * tech + 0.20 * per_s + 0.20 * vol_s, 2)
+    score = round(0.20 * trv + 0.40 * tech + 0.20 * per_s + 0.20 * vol_s, 2)
+    return score, {"trv": round(trv, 1), "tech": round(tech, 1), "per_s": round(per_s, 1), "vol_s": round(vol_s, 1)}
 
 
 def _ma_trend(cur: dict) -> str:
@@ -145,7 +146,7 @@ def compute_smart_ranking(launch_time: Optional[str] = None) -> dict:
             trv  = int(row["거래대금"])
             r1d  = round(float(row["등락률"]), 2) if "등락률" in row.index else 0.0
 
-            score = _composite_score(idx, len(candidates), cur["score"], per, vr)
+            score, breakdown = _composite_score(idx, len(candidates), cur["score"], per, vr)
 
             results.append({
                 "ticker":          ticker_code,
@@ -160,6 +161,7 @@ def compute_smart_ranking(launch_time: Optional[str] = None) -> dict:
                 "volume_ratio":    vr,
                 "ma_trend":        _ma_trend(cur),
                 "composite_score": score,
+                "score_breakdown": breakdown,
                 "tech_score":      cur["score"],
             })
         except Exception:

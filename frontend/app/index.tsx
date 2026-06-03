@@ -49,6 +49,14 @@ function BestPickCard({ pick, label }: { pick: BestPick; label: string }) {
         <Text style={styles.pickMetaText}>RSI {pick.rsi?.toFixed(0) ?? "—"}</Text>
         <Text style={styles.pickMetaText}>PER {pick.per.toFixed(1)}</Text>
       </View>
+      {pick.score_breakdown && (
+        <View style={styles.scoreBreakdown}>
+          <Text style={styles.scoreChip}>거래대금 {pick.score_breakdown.trv.toFixed(0)}</Text>
+          <Text style={styles.scoreChip}>기술 {pick.score_breakdown.tech.toFixed(0)}</Text>
+          <Text style={styles.scoreChip}>PER {pick.score_breakdown.per_s.toFixed(0)}</Text>
+          <Text style={styles.scoreChip}>거래량 {pick.score_breakdown.vol_s.toFixed(0)}</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -71,6 +79,14 @@ function SmartRow({ item }: { item: SmartStock }) {
         <View style={styles.scoreBarBg}>
           <View style={[styles.scoreBarFill, { width: `${barWidth}%` as any }]} />
         </View>
+        {item.score_breakdown && (
+          <View style={styles.scoreBreakdown}>
+            <Text style={styles.scoreChip}>거래대금 {item.score_breakdown.trv.toFixed(0)}</Text>
+            <Text style={styles.scoreChip}>기술 {item.score_breakdown.tech.toFixed(0)}</Text>
+            <Text style={styles.scoreChip}>PER {item.score_breakdown.per_s.toFixed(0)}</Text>
+            <Text style={styles.scoreChip}>거래량 {item.score_breakdown.vol_s.toFixed(0)}</Text>
+          </View>
+        )}
       </View>
       <View style={styles.smartMetrics}>
         <Text style={[styles.smartRec, { color: recColor }]}>{item.recommendation}</Text>
@@ -357,8 +373,10 @@ const styles = StyleSheet.create({
   smartInfo:    { flex: 1, marginHorizontal: 10 },
   smartName:    { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
   smartTicker:  { color: "#636366", fontSize: 12, marginTop: 1 },
-  scoreBarBg:   { height: 3, backgroundColor: "#2C2C2E", borderRadius: 2, marginTop: 6 },
-  scoreBarFill: { height: 3, backgroundColor: "#FF9F0A", borderRadius: 2 },
+  scoreBarBg:    { height: 3, backgroundColor: "#2C2C2E", borderRadius: 2, marginTop: 6 },
+  scoreBarFill:  { height: 3, backgroundColor: "#FF9F0A", borderRadius: 2 },
+  scoreBreakdown:{ flexDirection: "row", gap: 6, marginTop: 4, flexWrap: "wrap" },
+  scoreChip:     { color: "#636366", fontSize: 10 },
   smartMetrics: { alignItems: "flex-end" },
   smartRec:     { fontSize: 13, fontWeight: "700" },
   smartReturn:  { fontSize: 12, fontWeight: "600", marginTop: 2 },

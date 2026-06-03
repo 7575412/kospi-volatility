@@ -1,6 +1,13 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants/api";
 
+export type ScoreBreakdown = {
+  trv: number;
+  tech: number;
+  per_s: number;
+  vol_s: number;
+};
+
 export type SmartStock = {
   rank: number;
   ticker: string;
@@ -16,6 +23,7 @@ export type SmartStock = {
   ma_trend: "bullish" | "bearish" | "neutral";
   composite_score: number;
   tech_score: number;
+  score_breakdown?: ScoreBreakdown;
 };
 
 export type BestPick = SmartStock & { reason: string; sell_score?: number };
