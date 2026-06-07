@@ -1,14 +1,13 @@
 import json
 import time
 import numpy as np
-import requests
 import pandas as pd
-from io import StringIO
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from pykrx import stock
 from core.cache import get_cache
+from services.analysis_service import _load_krx_ticker_list
 
 CACHE_KEY_PREFIX = "volatility_top10"
 DISK_CACHE_PATH = Path(__file__).parent.parent / "cache"
@@ -57,17 +56,6 @@ def _save_disk(date_str: str, result: dict) -> None:
         pass
 
 
-def _get_kospi_tickers() -> list:
-    resp = requests.get(
-        "http://kind.krx.co.kr/corpgeneral/corpList.do",
-        params={"method": "download", "searchType": "13"},
-        headers={"User-Agent": "Mozilla/5.0", "Referer": "http://kind.krx.co.kr/"},
-        timeout=15,
-    )
-    df = pd.read_html(StringIO(resp.text), encoding="euc-kr")[0]
-    kospi = df[df["시장구분"].str.contains("유가", na=False)]
-    return [str(t).zfill(6) for t in kospi["종목코드"] if str(t).isdigit()]
-
 
 def compute_top10_volatility(launch_time: Optional[str] = None) -> dict:
     if launch_time:
@@ -96,7 +84,7 @@ def compute_top10_volatility(launch_time: Optional[str] = None) -> dict:
     # 3순위: 실제 계산
     start_dt  = end_dt - timedelta(days=92)
     start_str = _date_str(start_dt)
-    tickers   = _get_kospi_tickers()
+    tickers   = [t["ticker"] for t in _load_krx_ticker_list() if "유가" in t["market"]]
 
     records = []
     for ticker in tickers:
