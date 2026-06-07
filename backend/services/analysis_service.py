@@ -53,7 +53,7 @@ def _save_disk(key: str, result: dict) -> None:
         pass
 
 
-def compute_indicators(df: pd.DataFrame, currency: str = "KRW") -> dict:
+def compute_indicators(df: pd.DataFrame, currency: str = "KRW", eps: float = 0.0, per: float = 0.0) -> dict:
     """
     Compute technical indicators from OHLCV DataFrame.
     Requires columns: 종가, 거래량 (common to both pykrx and yfinance after rename).
@@ -91,10 +91,13 @@ def compute_indicators(df: pd.DataFrame, currency: str = "KRW") -> dict:
     bb_range = (bb_upper - bb_lower).replace(0, np.nan)
     bb_pct   = ((close - bb_lower) / bb_range).fillna(0.5).clip(0, 1)
 
-    # ±10% price targets based on last close
-    ref_price   = float(close.iloc[-1])
-    buy_target  = ref_price * 0.90
-    sell_target = ref_price * 1.10
+    ref_price = float(close.iloc[-1])
+    if eps > 0 and per > 0:
+        buy_target  = eps * (per * 0.85)
+        sell_target = eps * (per * 1.15)
+    else:
+        buy_target  = ref_price * 0.90
+        sell_target = ref_price * 1.10
 
     # ── Signal vectors (vectorised crossovers) ────────────────────────────
     gc_5_20  = (ma5 > ma20)  & (ma5.shift(1)  <= ma20.shift(1))   # MA5×MA20 골든크로스
@@ -132,8 +135,8 @@ def compute_indicators(df: pd.DataFrame, currency: str = "KRW") -> dict:
         if macd_dc.iloc[i]:  score -= 1; triggers.append("MACD데스크로스")
         if bb_bot.iloc[i]:   score += 1; triggers.append("BB하단이탈")
         if bb_top.iloc[i]:   score -= 1; triggers.append("BB상단이탈")
-        if price_buy.iloc[i]:  score += 1; triggers.append("-10%목표가달성")
-        if price_sell.iloc[i]: score -= 1; triggers.append("+10%목표가달성")
+        if price_buy.iloc[i]:  score += 1; triggers.append("매수목표가달성")
+        if price_sell.iloc[i]: score -= 1; triggers.append("매도목표가달성")
 
         if not triggers:
             continue
@@ -202,13 +205,16 @@ def compute_indicators(df: pd.DataFrame, currency: str = "KRW") -> dict:
 
     round2 = lambda v: round(v, 0 if currency == "KRW" else 2)
 
+    buy_pct  = round((buy_target  / ref_price - 1) * 100, 1) if ref_price > 0 else -10.0
+    sell_pct = round((sell_target / ref_price - 1) * 100, 1) if ref_price > 0 else  10.0
+
     return {
         "price_targets": {
-            "ref_price":  round2(ref_price),
-            "buy_target": round2(buy_target),
+            "ref_price":   round2(ref_price),
+            "buy_target":  round2(buy_target),
             "sell_target": round2(sell_target),
-            "buy_pct":   -10.0,
-            "sell_pct":   10.0,
+            "buy_pct":     buy_pct,
+            "sell_pct":    sell_pct,
         },
         "current": {
             "rsi":            cur_rsi,
@@ -257,7 +263,19 @@ def compute_kr_analysis(ticker: str, launch_time: Optional[str] = None) -> dict:
     if df is None or len(df) < 30:
         raise ValueError(f"데이터 부족: {ticker} (최소 30거래일 필요)")
 
-    indicators = compute_indicators(df, currency="KRW")
+    eps, per = 0.0, 0.0
+    try:
+        df_fund = stock.get_market_fundamental_by_ticker(end_str, market="KOSPI")
+        if ticker in df_fund.index:
+            row_f = df_fund.loc[ticker]
+            if "EPS" in df_fund.columns and pd.notna(row_f["EPS"]) and float(row_f["EPS"]) > 0:
+                eps = float(row_f["EPS"])
+            if "PER" in df_fund.columns and pd.notna(row_f["PER"]) and float(row_f["PER"]) > 0:
+                per = float(row_f["PER"])
+    except Exception:
+        pass
+
+    indicators = compute_indicators(df, currency="KRW", eps=eps, per=per)
 
     result = {
         "ticker":        ticker,
