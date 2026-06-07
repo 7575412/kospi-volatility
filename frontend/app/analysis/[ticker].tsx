@@ -143,22 +143,21 @@ export default function AnalysisScreen() {
         </View>
       )}
 
-      {/* ±10% price targets */}
       {pt && (
         <View style={styles.targetsRow}>
           <View style={[styles.targetCard, styles.buyCard]}>
-            <Text style={styles.targetLabel}>매수 목표가 (−10%)</Text>
+            <Text style={styles.targetLabel}>매수 목표가</Text>
             <Text style={styles.targetPrice}>
               {isUS ? `$${pt.buy_target.toFixed(2)}` : `₩${Math.round(pt.buy_target).toLocaleString()}`}
             </Text>
-            <Text style={styles.targetSub}>현재가 대비 −10%</Text>
+            <Text style={styles.targetSub}>현재가 대비 {pt.buy_pct.toFixed(1)}%</Text>
           </View>
           <View style={[styles.targetCard, styles.sellCard]}>
-            <Text style={styles.targetLabel}>매도 목표가 (+10%)</Text>
+            <Text style={styles.targetLabel}>매도 목표가</Text>
             <Text style={styles.targetPrice}>
               {isUS ? `$${pt.sell_target.toFixed(2)}` : `₩${Math.round(pt.sell_target).toLocaleString()}`}
             </Text>
-            <Text style={styles.targetSub}>현재가 대비 +10%</Text>
+            <Text style={styles.targetSub}>현재가 대비 +{pt.sell_pct.toFixed(1)}%</Text>
           </View>
         </View>
       )}
