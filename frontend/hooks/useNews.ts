@@ -14,6 +14,7 @@ type State = {
   endDate: string;
   loading: boolean;
   error: string | null;
+  cached: boolean;
 };
 
 export function useNews(ticker: string, launchTime: string) {
@@ -24,6 +25,7 @@ export function useNews(ticker: string, launchTime: string) {
     endDate: "",
     loading: false,
     error: null,
+    cached: false,
   });
 
   const fetch_ = useCallback(async () => {
@@ -42,6 +44,7 @@ export function useNews(ticker: string, launchTime: string) {
         endDate:   json.end_date,
         loading:   false,
         error:     null,
+        cached:    json.cached ?? false,
       });
     } catch (e: any) {
       setState((s) => ({ ...s, loading: false, error: e.message ?? "알 수 없는 오류" }));
