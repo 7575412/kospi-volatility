@@ -73,11 +73,17 @@ def compute_us_analysis(symbol: str) -> dict:
 
     indicators = compute_indicators(df, currency="USD")
 
+    close       = df["종가"].astype(float)
+    price_now   = float(close.iloc[-1])
+    price_3m    = float(close.iloc[max(0, len(close) - 63)])
+    return_3m   = round((price_now / price_3m - 1) * 100, 2) if price_3m > 0 else None
+
     result = {
         "ticker":        symbol,
         "name":          name,
         "as_of_date":    today_str,
-        "current_price": round(float(df["종가"].iloc[-1]), 2),
+        "current_price": round(price_now, 2),
+        "return_3m":     return_3m,
         "currency":      "USD",
         "cached":        False,
         **indicators,
@@ -109,20 +115,13 @@ def compute_us_energy_list() -> dict:
     for s in US_ENERGY_STOCKS:
         try:
             a = compute_us_analysis(s["symbol"])
-            ohlcv = a.get("ohlcv", [])
-            return_3m = None
-            if len(ohlcv) >= 2:
-                first = ohlcv[0]["close"]
-                last  = ohlcv[-1]["close"]
-                if first:
-                    return_3m = round((last / first - 1) * 100, 2)
             stocks_out.append({
                 "symbol":         s["symbol"],
                 "name":           s["name"],
                 "current_price":  a["current_price"],
                 "recommendation": a["current"]["recommendation"],
                 "rsi":            a["current"]["rsi"],
-                "return_3m":      return_3m,
+                "return_3m":      a.get("return_3m"),
                 "buy_target":     a["price_targets"]["buy_target"],
                 "sell_target":    a["price_targets"]["sell_target"],
             })
