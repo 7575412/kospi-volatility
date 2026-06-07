@@ -151,6 +151,13 @@ def find_similar_signals(ticker: str, current_analysis: dict) -> dict:
         result["cached"] = True
         return result
 
+    disk = _load_disk(cache_key)
+    if disk:
+        mem_cache[cache_key] = disk
+        disk = dict(disk)
+        disk["cached"] = True
+        return disk
+
     top20    = compute_top10_volatility()["stocks"]
     episodes = []
 
