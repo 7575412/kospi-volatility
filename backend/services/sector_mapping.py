@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import pandas as pd
-import numpy as np
 from pykrx import stock as pykrx_stock
 from services.analysis_service import (
     _date_str, _last_business_day, _to_business_day,
-    _load_disk, _save_disk, compute_kr_analysis, get_cache,
+    _load_disk, _save_disk, compute_kr_analysis, compute_indicators, get_cache,
 )
 
 SECTOR_US_PEERS: dict[str, list[tuple[str, str]]] = {
@@ -62,29 +61,25 @@ def _quick_us_snapshot(symbol: str) -> dict:
     if hasattr(df.index, "tz") and df.index.tz is not None:
         df.index = df.index.tz_convert(None)
 
-    close = df["Close"].astype(float)
+    df = df.rename(columns={"Open": "시가", "High": "고가", "Low": "저가", "Close": "종가", "Volume": "거래량"})
+    df = df[["시가", "고가", "저가", "종가", "거래량"]]
 
-    delta    = close.diff()
-    gain     = delta.clip(lower=0)
-    loss     = (-delta.clip(upper=0))
-    avg_gain = gain.ewm(alpha=1/14, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/14, adjust=False).mean()
-    rs  = avg_gain / avg_loss.replace(0, np.nan)
-    rsi = float((100 - 100 / (1 + rs)).fillna(50).iloc[-1])
+    ind  = compute_indicators(df, currency="USD")
+    cur  = ind["current"]
+    pt   = ind["price_targets"]
 
-    current_price = round(float(close.iloc[-1]), 2)
-    price_ago     = round(float(close.iloc[0]),  2)
-    return_3m     = round((current_price / price_ago - 1) * 100, 2) if price_ago > 0 else None
-
-    rec = "매수" if rsi < 40 else "매도" if rsi > 65 else "중립"
+    close     = df["종가"].astype(float)
+    price_now = float(close.iloc[-1])
+    price_3m  = float(close.iloc[max(0, len(close) - 63)])
+    return_3m = round((price_now / price_3m - 1) * 100, 2) if price_3m > 0 else None
 
     return {
-        "current_price": current_price,
-        "recommendation": rec,
-        "rsi":            round(rsi, 1),
+        "current_price":  round(price_now, 2),
+        "recommendation": cur["recommendation"],
+        "rsi":            cur["rsi"],
         "return_3m":      return_3m,
-        "buy_target":     round(current_price * 0.9, 2),
-        "sell_target":    round(current_price * 1.1, 2),
+        "buy_target":     pt["buy_target"],
+        "sell_target":    pt["sell_target"],
     }
 
 
@@ -119,6 +114,7 @@ def get_us_peers(ticker: str, launch_time: Optional[str] = None) -> dict:
     disk = _load_disk(cache_key)
     if disk:
         mem_cache[cache_key] = disk
+        disk = dict(disk)
         disk["cached"] = True
         return disk
 
