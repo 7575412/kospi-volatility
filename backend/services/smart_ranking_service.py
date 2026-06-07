@@ -62,7 +62,7 @@ def _pick_best_buy(ranked: list) -> Optional[dict]:
             if s.get("volume_ratio") and s["volume_ratio"] > 1.5:
                 parts.append(f"거래량 {s['volume_ratio']:.1f}배 급증")
             return {**s, "reason": " · ".join(parts) if parts else "복합 기술지표 매수 신호"}
-    return {**ranked[0], "reason": "복합 점수 1위"} if ranked else None
+    return None
 
 
 def _sell_score(s: dict) -> int:
