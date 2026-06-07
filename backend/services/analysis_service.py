@@ -1,4 +1,5 @@
 import json
+import time
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -36,11 +37,17 @@ def _disk_path(key: str) -> Path:
     return DISK_CACHE_PATH / f"{key}.json"
 
 
-def _load_disk(key: str) -> Optional[dict]:
+def _load_disk(key: str, max_age_seconds: Optional[int] = 1800) -> Optional[dict]:
     p = _disk_path(key)
     if p.exists():
         try:
-            return json.loads(p.read_text())
+            data = json.loads(p.read_text())
+            if max_age_seconds is not None:
+                cached_at = data.get("disk_cached_at")
+                if cached_at is None or (time.time() - cached_at) > max_age_seconds:
+                    return None
+            data.pop("disk_cached_at", None)
+            return data
         except Exception:
             pass
     return None
@@ -48,7 +55,9 @@ def _load_disk(key: str) -> Optional[dict]:
 
 def _save_disk(key: str, result: dict) -> None:
     try:
-        _disk_path(key).write_text(json.dumps(result, ensure_ascii=False))
+        _disk_path(key).write_text(
+            json.dumps({**result, "disk_cached_at": time.time()}, ensure_ascii=False)
+        )
     except Exception:
         pass
 

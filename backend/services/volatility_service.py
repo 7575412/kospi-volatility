@@ -1,4 +1,5 @@
 import json
+import time
 import numpy as np
 import requests
 import pandas as pd
@@ -31,11 +32,17 @@ def _disk_path(date_str: str) -> Path:
     return DISK_CACHE_PATH / f"volatility_{date_str}.json"
 
 
-def _load_disk(date_str: str) -> Optional[dict]:
+def _load_disk(date_str: str, max_age_seconds: Optional[int] = None) -> Optional[dict]:
     p = _disk_path(date_str)
     if p.exists():
         try:
-            return json.loads(p.read_text())
+            data = json.loads(p.read_text())
+            if max_age_seconds is not None:
+                cached_at = data.get("disk_cached_at")
+                if cached_at is None or (time.time() - cached_at) > max_age_seconds:
+                    return None
+            data.pop("disk_cached_at", None)
+            return data
         except Exception:
             pass
     return None
@@ -43,7 +50,9 @@ def _load_disk(date_str: str) -> Optional[dict]:
 
 def _save_disk(date_str: str, result: dict) -> None:
     try:
-        _disk_path(date_str).write_text(json.dumps(result, ensure_ascii=False))
+        _disk_path(date_str).write_text(
+            json.dumps({**result, "disk_cached_at": time.time()}, ensure_ascii=False)
+        )
     except Exception:
         pass
 
