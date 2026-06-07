@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants/api";
+import { fetchWithTimeout } from "../constants/fetch";
 
 export type PriceTargets = {
   ref_price: number;
@@ -63,13 +64,10 @@ export function useAnalysis(ticker: string, launchTime?: string, isUS = false) {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 60 * 1000);
       const url = isUS
         ? `${API_BASE}/us/analysis/${ticker}`
         : `${API_BASE}/analysis/${ticker}${launchTime ? `?launch_time=${launchTime}` : ""}`;
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(url, 60_000);
       if (!res.ok) throw new Error(`서버 오류: HTTP ${res.status}`);
       const json: AnalysisData = await res.json();
       setState({ data: json, loading: false, error: null });
@@ -108,11 +106,8 @@ export function usePeers(ticker: string, launchTime?: string) {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 60_000);
       const lt = launchTime ? `?launch_time=${launchTime}` : "";
-      const res = await fetch(`${API_BASE}/analysis/${ticker}/us-peers${lt}`, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(`${API_BASE}/analysis/${ticker}/us-peers${lt}`, 60_000);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setState({ data: await res.json(), loading: false, error: null });
     } catch (e: any) {
@@ -148,11 +143,8 @@ export function useSimilarSignals(ticker: string, launchTime?: string) {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 60_000);
       const lt = launchTime ? `?launch_time=${launchTime}` : "";
-      const res = await fetch(`${API_BASE}/analysis/${ticker}/similar-signals${lt}`, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(`${API_BASE}/analysis/${ticker}/similar-signals${lt}`, 60_000);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setState({ data: await res.json(), loading: false, error: null });
     } catch (e: any) {

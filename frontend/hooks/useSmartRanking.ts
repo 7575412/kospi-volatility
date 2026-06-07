@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants/api";
+import { fetchWithTimeout } from "../constants/fetch";
 
 export type ScoreBreakdown = {
   trv: number;
@@ -44,11 +45,8 @@ export function useSmartRanking(launchTime?: string) {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 180_000);
       const url = `${API_BASE}/kospi/smart-ranking${launchTime ? `?launch_time=${launchTime}` : ""}`;
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(url, 180_000);
       if (!res.ok) throw new Error(`서버 오류: HTTP ${res.status}`);
       const json: SmartRankingData = await res.json();
       setState({ data: json, loading: false, error: null });
