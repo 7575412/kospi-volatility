@@ -301,24 +301,43 @@ def compute_kr_analysis(ticker: str, launch_time: Optional[str] = None) -> dict:
     return result
 
 
-def search_kr_tickers(query: str) -> list:
-    """Search KOSPI+KOSDAQ tickers by company name substring."""
+def _load_krx_ticker_list() -> list:
+    """Fetch full KRX company list, cached in memory + disk for the day."""
     import requests
     from io import StringIO
+    cache_key = f"krx_tickers_{datetime.today().strftime('%Y%m%d')}"
+    mem_cache = get_cache()
+
+    if cache_key in mem_cache:
+        return mem_cache[cache_key]
+
+    disk = _load_disk(cache_key, max_age_seconds=None)
+    if disk:
+        tickers = disk.get("tickers", [])
+        mem_cache[cache_key] = tickers
+        return tickers
+
+    resp = requests.get(
+        "http://kind.krx.co.kr/corpgeneral/corpList.do",
+        params={"method": "download", "searchType": "13"},
+        headers={"User-Agent": "Mozilla/5.0", "Referer": "http://kind.krx.co.kr/"},
+        timeout=15,
+    )
+    df = pd.read_html(StringIO(resp.text), encoding="euc-kr")[0]
+    df["코드"] = df["종목코드"].astype(str).str.zfill(6)
+    tickers = [
+        {"ticker": row["코드"], "name": row["회사명"], "market": str(row.get("시장구분", ""))}
+        for _, row in df.iterrows()
+        if str(row["종목코드"]).isdigit()
+    ]
+    mem_cache[cache_key] = tickers
+    _save_disk(cache_key, {"tickers": tickers})
+    return tickers
+
+
+def search_kr_tickers(query: str) -> list:
     try:
-        resp = requests.get(
-            "http://kind.krx.co.kr/corpgeneral/corpList.do",
-            params={"method": "download", "searchType": "13"},
-            headers={"User-Agent": "Mozilla/5.0", "Referer": "http://kind.krx.co.kr/"},
-            timeout=15,
-        )
-        import pandas as pd
-        df = pd.read_html(StringIO(resp.text), encoding="euc-kr")[0]
-        df["코드"] = df["종목코드"].astype(str).str.zfill(6)
-        matched = df[df["회사명"].str.contains(query, na=False)]
-        return [
-            {"ticker": row["코드"], "name": row["회사명"], "market": row.get("시장구분", "")}
-            for _, row in matched.iterrows()
-        ]
+        all_tickers = _load_krx_ticker_list()
+        return [t for t in all_tickers if query in t["name"]]
     except Exception:
         return []
