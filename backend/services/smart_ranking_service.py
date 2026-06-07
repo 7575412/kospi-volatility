@@ -138,11 +138,11 @@ def compute_smart_ranking(launch_time: Optional[str] = None) -> dict:
             if df is None or len(df) < 20:
                 continue
 
-            ind  = compute_indicators(df, currency="KRW")
+            per  = float(row["PER"]) if "PER" in row.index and pd.notna(row["PER"]) and float(row["PER"]) > 0 else 0.0
+            eps  = float(row["EPS"]) if "EPS" in row.index and pd.notna(row["EPS"]) and float(row["EPS"]) > 0 else 0.0
+            ind  = compute_indicators(df, currency="KRW", eps=eps, per=per)
             cur  = ind["current"]
             vr   = _volume_ratio(df)
-            per  = float(row["PER"]) if "PER" in row.index and pd.notna(row["PER"]) else 15.0
-            eps  = int(row["EPS"])   if "EPS" in row.index and pd.notna(row["EPS"]) else 0
             trv  = int(row["거래대금"])
             r1d  = round(float(row["등락률"]), 2) if "등락률" in row.index else 0.0
 
