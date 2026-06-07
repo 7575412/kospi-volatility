@@ -5,13 +5,20 @@ import asyncio
 from routers import volatility, news, analysis, us_stocks, smart_ranking, peers
 
 
+def _warm(fn, arg=None):
+    try:
+        fn(arg)
+    except Exception:
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from services.volatility_service import compute_top10_volatility
     from services.smart_ranking_service import compute_smart_ranking
     loop = asyncio.get_running_loop()
-    loop.run_in_executor(None, compute_top10_volatility, None)
-    loop.run_in_executor(None, compute_smart_ranking, None)
+    loop.run_in_executor(None, _warm, compute_top10_volatility)
+    loop.run_in_executor(None, _warm, compute_smart_ranking)
     yield
 
 app = FastAPI(title="KOSPI Volatility API", lifespan=lifespan)
