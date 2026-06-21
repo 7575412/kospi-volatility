@@ -133,6 +133,7 @@ function UsCard({ item }: { item: UsStockSummary }) {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("KR");
   const launchTime = useRef(toLaunchDate(new Date())).current;
 
@@ -252,6 +253,12 @@ export default function HomeScreen() {
           onPress={() => setTab("PICK")}
         >
           <Text style={[styles.tabText, tab === "PICK" && styles.tabTextActive]}>★ 추천</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => router.push("/portfolio")}
+        >
+          <Text style={styles.tabText}>포트</Text>
         </TouchableOpacity>
       </View>
 
