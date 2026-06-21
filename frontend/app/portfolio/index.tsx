@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   FlatList, View, Text, StyleSheet,
   TouchableOpacity, TextInput, ActivityIndicator,
@@ -118,12 +119,29 @@ function HoldingCard({
   );
 }
 
+const STORAGE_KEY = "portfolio:holdings";
+
 export default function PortfolioScreen() {
   const router = useRouter();
   const [holdings, setHoldings] = useState<PortfolioInput[]>([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formVisible, setFormVisible] = useState(false);
   const [formError, setFormError] = useState("");
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try { setHoldings(JSON.parse(raw)); } catch {}
+      }
+      loaded.current = true;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!loaded.current) return;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
+  }, [holdings]);
 
   const stableHoldings = useMemo(() => holdings, [holdings]);
   const { data, loading, error, load } = usePortfolio(stableHoldings);
