@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants/api";
+import { fetchWithTimeout } from "../constants/fetch";
 
 export type StockItem = {
   rank: number;
@@ -31,10 +32,7 @@ export function useVolatility(launchTime: string) {
   const refresh = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5분 타임아웃
-      const res = await fetch(`${API_BASE}/volatility?launch_time=${launchTime}`, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(`${API_BASE}/volatility?launch_time=${launchTime}`, 5 * 60 * 1000);
       if (!res.ok) throw new Error(`서버 오류: HTTP ${res.status}`);
       const json = await res.json();
       setState({

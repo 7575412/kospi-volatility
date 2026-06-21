@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
-from routers import volatility, news, analysis, us_stocks, smart_ranking, peers
+from routers import volatility, news, analysis, us_stocks, smart_ranking, peers, portfolio
 
 
 def _warm(fn, arg=None):
@@ -26,7 +26,7 @@ app = FastAPI(title="KOSPI Volatility API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -36,6 +36,7 @@ app.include_router(analysis.router,       prefix="/api")
 app.include_router(us_stocks.router,      prefix="/api")
 app.include_router(smart_ranking.router,  prefix="/api")
 app.include_router(peers.router,          prefix="/api")
+app.include_router(portfolio.router,      prefix="/api")
 
 
 @app.get("/health")

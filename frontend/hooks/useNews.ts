@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants/api";
+import { fetchWithTimeout } from "../constants/fetch";
 
 export type NewsArticle = {
   title: string;
@@ -31,10 +32,7 @@ export function useNews(ticker: string, launchTime: string) {
   const fetch_ = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 60 * 1000); // 1분 타임아웃
-      const res = await fetch(`${API_BASE}/news/${ticker}?launch_time=${launchTime}`, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(`${API_BASE}/news/${ticker}?launch_time=${launchTime}`, 60 * 1000);
       if (!res.ok) throw new Error(`서버 오류: HTTP ${res.status}`);
       const json = await res.json();
       setState({

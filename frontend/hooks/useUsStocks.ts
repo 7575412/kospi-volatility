@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { API_BASE } from "../constants/api";
+import { fetchWithTimeout } from "../constants/fetch";
 
 export type UsStockSummary = {
   symbol: string;
@@ -32,10 +33,7 @@ export function useUsStocks() {
   const load = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 120 * 1000);
-      const res = await fetch(`${API_BASE}/us/energy`, { signal: controller.signal });
-      clearTimeout(timer);
+      const res = await fetchWithTimeout(`${API_BASE}/us/energy`, 120 * 1000);
       if (!res.ok) throw new Error(`서버 오류: HTTP ${res.status}`);
       const json = await res.json();
       setState({
