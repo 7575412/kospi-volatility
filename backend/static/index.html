@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KOSPI 스마트투자 설치</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #1c1c1e;
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .icon {
+      width: 80px;
+      height: 80px;
+      background: #ff9f0a;
+      border-radius: 20px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    h1 { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+    .version {
+      display: inline-block;
+      background: #2c2c2e;
+      color: #8e8e93;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+    }
+    .download-btn {
+      display: block;
+      background: #ff9f0a;
+      color: #000;
+      font-size: 17px;
+      font-weight: 700;
+      padding: 16px;
+      border-radius: 14px;
+      text-decoration: none;
+      margin-bottom: 28px;
+      transition: opacity 0.15s;
+    }
+    .download-btn:active { opacity: 0.8; }
+    .steps {
+      text-align: left;
+      background: #2c2c2e;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
+    }
+    .steps h2 {
+      font-size: 13px;
+      color: #8e8e93;
+      font-weight: 600;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      background: #ff9f0a;
+      color: #000;
+      font-size: 12px;
+      font-weight: 800;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-text { font-size: 14px; line-height: 1.5; color: #e5e5ea; }
+    .step-text b { color: #fff; }
+    .url-hint {
+      font-size: 12px;
+      color: #636366;
+      line-height: 1.6;
+    }
+    .url-hint code {
+      background: #2c2c2e;
+      padding: 2px 7px;
+      border-radius: 6px;
+      color: #ff9f0a;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📈</div>
+    <h1>KOSPI 스마트투자</h1>
+    <span class="version" id="ver">최신 버전</span>
+
+    <a class="download-btn" href="/download/apk" id="dl-btn">
+      ⬇ APK 다운로드
+    </a>
+
+    <div class="steps">
+      <h2>설치 방법</h2>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">위 버튼을 탭해 APK를 다운로드합니다</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><b>파일 앱</b> 또는 알림창에서 다운로드된 APK를 탭합니다</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><b>"알 수 없는 출처"</b> 허용 후 <b>설치</b>를 탭합니다</div>
+      </div>
+    </div>
+
+    <p class="url-hint">
+      같은 Wi-Fi에 연결된 기기에서<br/>
+      <code id="url-display">이 주소</code>로 접속하세요
+    </p>
+  </div>
+
+  <script>
+    // Show current server URL
+    document.getElementById("url-display").textContent = location.host;
+
+    // Fetch APK info to show filename/version
+    fetch("/download/apk/info")
+      .then(r => r.json())
+      .then(d => {
+        if (d.filename) document.getElementById("ver").textContent = d.filename.replace(".apk", "");
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

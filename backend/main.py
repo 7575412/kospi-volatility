@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
-from routers import volatility, news, analysis, us_stocks, smart_ranking, peers, portfolio
+from routers import volatility, news, analysis, us_stocks, smart_ranking, peers, portfolio, installer
 
 
 def _warm(fn, arg=None):
@@ -37,6 +37,7 @@ app.include_router(us_stocks.router,      prefix="/api")
 app.include_router(smart_ranking.router,  prefix="/api")
 app.include_router(peers.router,          prefix="/api")
 app.include_router(portfolio.router,      prefix="/api")
+app.include_router(installer.router)
 
 
 @app.get("/health")
