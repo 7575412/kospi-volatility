@@ -107,10 +107,6 @@ def compute_portfolio(holdings: list[dict], launch_time: Optional[str] = None) -
         })
 
     as_of_date = launch_time or datetime.today().strftime("%Y%m%d")
-    any_cached = any(
-        (r.get("error") is None)
-        for r in results
-    )
 
     return {
         "as_of_date": as_of_date,
